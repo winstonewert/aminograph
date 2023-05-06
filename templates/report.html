@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% import "report-macros.html" as macros %}
+
+
+{% block content %}
+<style>
+	#page {
+		width: 100vw;
+		height: 100vh;
+	}
+
+	.content-area {
+		display: flex;
+		flex-direction: column;
+		overflow-y: auto;
+		flex-grow: 1;
+	}
+
+	.content-area-row {
+		display: flex;
+		flex-direction: row;
+		overflow-y: auto;
+		flex-grow: 1;
+	}
+
+	.content-area.active {
+		display: flex;
+	}
+</style>
+<div id="page" class="content-area">
+
+	<ul class="nav nav-tabs" id="main-tabs" role="tablist">
+		<li class="nav-item" role="presentation">
+			<button class="nav-link active" id="grid-tab" data-toggle="tab" data-target="#grid" type="button" role="tab"
+				aria-controls="grid" aria-selected="true">Grid</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="layers-tab" data-toggle="tab" data-target="#layers" type="button" role="tab"
+				aria-controls="layers" aria-selected="false">Layers</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="sequence-tab" data-toggle="tab" data-target="#sequence" type="button"
+				role="tab" aria-controls="sequence" aria-selected="false">Sequence</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="nodes-tab" data-toggle="tab" data-target="#nodes" type="button" role="tab"
+				aria-controls="nodes" aria-selected="false">Nodes</button>
+		</li>
+	</ul>
+	<div class="tab-content content-area" id="main-tabs-content">
+		<div class="tab-pane fade show active content-area" id="grid" role="tabpanel" aria-labelledby="grid-tab">
+
+			<style>
+				.module-table .active {
+					background-color: darkseagreen;
+				}
+
+				.module-table .inactive {
+					background-color: crimson;
+				}
+
+				.module-table-container {
+					overflow: scroll;
+				}
+
+				.module-table thead th {
+					position: sticky;
+					top: 0;
+					background: white;
+					z-index: 10;
+				}
+
+				.module-table tbody th {
+					position: sticky;
+					left: 0;
+					background: white;
+				}
+
+				#name-header {
+					left: 0;
+					z-index: 20;
+				}
+			</style>
+			<div class="module-table-container">
+
+				<table class="table module-table">
+					<thead>
+						<tr>
+							<th id="name-header">Name</th>
+							{% for node_id in node_ids %}
+							<th style="font-size: .5rem">{{node_id}}</th>
+							{% endfor %}
+						</tr>
+					</thead>
+					<tbody>
+						{% for sequence_id in sequence_ids %}
+						<tr>
+							<th>
+								{{sequence_id}}
+							</th>
+
+							{% for node_id in node_ids %}
+							<td class="{% if sequence_id in node_sequences[node_id] %}active{%else%}inactive{%endif%}">
+
+							</td>
+							{%endfor%}
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="tab-pane fade content-area" id="layers" role="tabpanel" aria-labelledby="layer-tab">
+			<div class="content-area-row" style="overflow: auto">
+				<style>
+					.node,
+					.sequence {
+						height: 1.2rem;
+						white-space: nowrap;
+					}
+
+					.node .label,
+					.sequence .label {
+						border: solid 1px black;
+						padding-left: .25rem;
+						padding-right: .25rem;
+						border-radius: .375rem;
+						position: relative;
+						left: -.5rem;
+						z-index: 10;
+						background-color: white;
+					}
+
+					.node .label {
+						background-color: aquamarine;
+					}
+
+					.node.primary-node .label {
+						background-color: chartreuse;
+					}
+
+					.sequence .label {
+						background-color: bisque;
+					}
+
+					.tree-line-,
+					.tree-line-i,
+					.tree-line-L,
+					.tree-line-t {
+						width: 1rem;
+						height: 1.2rem;
+						display: inline-block;
+						position: relative;
+						top: -.3rem;
+					}
+
+					.tree-line-L,
+					.tree-line-t {
+						border-bottom: solid 1px black;
+						border-left: solid 1px black;
+					}
+
+					.tree-line-i {
+						border-left: solid 1px black;
+					}
+
+					.amino-A {
+						background-color: #5B0099;
+						color: white;
+					}
+
+					.amino-R {
+						background-color: #66e600;
+					}
+
+					.amino-N {
+						background-color: #0000ff;
+						color: white;
+						;
+					}
+
+					.amino-D {
+						background-color: #0082ff;
+						;
+					}
+
+					.amino-C {
+						background-color: #dc0097;
+					}
+
+					.amino-Q {
+						background-color: #018100;
+					}
+
+					.amino-E {
+						background-color: #00c801;
+					}
+
+					.amino-G {
+						background-color: #77019A;
+						color: white;
+					}
+
+					.amino-H {
+						background-color: #B39500;
+					}
+
+					.amino-I {
+						background-color: #e63101;
+					}
+
+					.amino-L {
+						background-color: #e66500;
+					}
+
+					.amino-K {
+						background-color: #8b5a00;
+					}
+
+					.amino-M {
+						background-color: #c80000;
+					}
+
+					.amino-F {
+						background-color: #ffff00;
+					}
+
+					.amino-P {
+						background-color: #02009B;
+						color: white;
+					}
+
+					.amino-S {
+						background-color: #01ffff;
+					}
+
+					.amino-T {
+						background-color: #8c8c8c;
+					}
+
+					.amino-W {
+						background-color: #633c02;
+						color: white;
+					}
+
+					.amino-Y {
+						background-color: #5c2400;
+						color: white;
+					}
+
+					.amino-V {
+						background-color: #b4009a;
+						color: white;
+					}
+
+					.amino {
+						border: solid 1px black;
+						border-radius: 9999px;
+						padding-left: .5rem;
+						padding-right: .5rem;
+					}
+
+					.amino.change {
+						border-width: 2px;
+						border-color: red;
+					}
+				</style>
+				{{ macros::layers(index=final_value, depth=0,parent=final_value) }}
+			</div>
+		</div>
+		<div class="tab-pane fade content-area" id="sequence" role="tabpanel" aria-labelledby="sequence-tab">
+			<div class="content-area" style="overflow: auto">
+				<ul class="nav nav-pills">
+					{% for position in position_value_amino_acids %}
+					<li class="nav-item">
+						<a class="nav-link {%if loop.first %}active{%endif%}" data-toggle="tab"
+							href="#sequence-{{loop.index}}" role="tab" id="sequence-{{loop.index}}-tab"
+							aria-selected="{% if loop.first %}true{%else%}false{%endif%}">
+							{{position[final_value]}}{{loop.index}}
+						</a>
+					</li>
+					{% endfor %}
+				</ul>
+				<div class="tab-content content-area" id="sequence-tabs">
+					{% for position in position_value_amino_acids %}
+					<div class="content-area tab-pane fade {% if loop.first%} show active {% endif %}"
+						id="sequence-{{loop.index}}" role="tabpanel" aria-labelledby="sequence-{{loop.index}}-tab">
+
+						{{ macros::sequence(index=final_value, depth=0,parent=final_value, position=loop.index0) }}
+					</div>
+					{% endfor %}
+				</div>
+
+			</div>
+
+		</div>
+		<div class="tab-pane fade content-area" id="nodes" role="tabpanel" aria-labelledby="nodes-tab">
+			<div class="content-area" style="overflow: auto">
+				<ul class="nav nav-pills">
+					{% for node_id in node_ids %}
+					<li class="nav-item">
+						<a class="nav-link {%if loop.first %}active{%endif%}" data-toggle="tab"
+							href="#node-{{loop.index}}" role="tab" id="node-{{loop.index}}-tab"
+							aria-selected="{% if loop.first %}true{%else%}false{%endif%}">
+							{{node_id}}
+						</a>
+					</li>
+					{% endfor %}
+				</ul>
+				<div class="tab-content content-area" id="node-tabs">
+					{% for node in node_ids %}
+					<div class="content-area tab-pane fade {% if loop.first%} show active {% endif %}"
+						id="node-{{loop.index}}" role="tabpanel" aria-labelledby="node-{{loop.index}}-tab">
+						<div class="row">
+							<div class="col">
+								<div class="card box-shadow">
+									<div class="card-header">
+										Sequences
+									</div>
+									<div class="card-body">
+										<ul>
+											{% for sequence in node_sequences[node] %}
+											<li>{{sequence}}</li>
+											{% endfor %}
+										</ul>
+									</div>
+								</div>
+							</div>
+							<div class="col">
+								<div class="card box-shadow">
+									<div class="card-header">
+										Dependencies
+									</div>
+									<div class="card-body">
+										<ul>
+											{% for row in node_edges %}
+											{% if row[0] == node%}
+											<li>{{row[1]}}</li>
+											{% endif %}
+											{% endfor %}
+										</ul>
+									</div>
+								</div>
+							</div>
+							<div class="col">
+								<div class="card box-shadow">
+									<div class="card-header">
+										Dependants
+									</div>
+									<div class="card-body">
+										<ul>
+											{% for row in node_edges %}
+											{% if row[1] == node%}
+											<li>{{row[0]}}</li>
+											{% endif %}
+											{% endfor %}
+											{% for row in sequence_edges %}
+											{% if row[1] == node%}
+											<li>{{sequence_id_mapping[row[0]]}}</li>
+											{% endif %}
+											{% endfor %}
+										</ul>
+									</div>
+								</div>
+								<div class="col">
+									<div class="card box-shadow">
+										<div class="card-header">
+											Changes
+										</div>
+										<div class="card-body">
+											<ul>
+
+												{{ macros::changes(index=final_value, parent_index=final_value,
+												node=node,
+												current_layer=0) }}
+											</ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					{% endfor %}
+				</div>
+
+			</div>
+
+		</div>
+	</div>
+	{% endblock %}

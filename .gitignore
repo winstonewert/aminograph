@@ -1,0 +1,9 @@
+/target
+/images
+/tmp-cache
+*.dot
+*.pdf
+*.log
+.env
+.http-cache
+.image-cache

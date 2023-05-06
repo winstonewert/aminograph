@@ -1,0 +1,216 @@
+{% macro show_depth(depth) %}
+{% for letter in depth %}
+<div class="tree-line-{{letter}}"></div>
+{% endfor %}
+{% endmacro %}
+
+{% macro layers(index, depth, parent, depth_alt="", current_layer=0, parent_index=0, primary=false) %}
+{% set local_id = parent ~ "@" ~ index %}
+{% if instructions[index].action.type == "Combine" %}
+<div class="col-auto">
+
+	<ul class="nav nav-pills flex-column">
+		{% for value in instructions[index].values %}
+		<li class="nav-item">
+			<a data-toggle="tab" href="#layer-{{loop.index}}" role="tab"
+				class="nav-link {%if loop.first %}active{%endif%}" id="layer-{{loop.index}}-tab"
+				aria-controls="layer-{{loop.index}}"
+				aria-selected="{% if loop.first %}true{%else%}false{%endif%}">{{loop.index}}</a>
+		</li>
+		{% endfor %}
+	</ul>
+</div>
+<div class="col content-area">
+
+	<div class="tab-content content-area" id="layers-tabs">
+		{% for source in instructions[index].values %}
+		<div class="content-area tab-pane fade {% if loop.first%} show active {% endif %}" id="layer-{{loop.index}}"
+			role="tabpanel" aria-labelledby="layer-{{loop.index}}-tab">
+			<div class="row">
+				<div class="col">
+					<div class="card box-shadow">
+						<div class="card-header">
+							Layer {{loop.index}}
+						</div>
+						<div class="card-body">
+
+							{{ self::layers(index=source, depth = "", parent = local_id, current_layer =
+							loop.index0,parent_index=index,primary=false) }}
+						</div>
+					</div>
+
+				</div>
+				<div class="col">
+					<div class="card box-shadow">
+						<div class="card-header">
+							Comparison
+						</div>
+						<div class="card-body">
+
+
+							{{ self::layers(index=instructions[index].values[0], depth = "", parent =
+							local_id,
+							current_layer =
+							loop.index0,parent_index=instructions[index].values[0],primary=true) }}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+{% elif instructions[index].action.type == "Node" %}
+<div class="node {%if instructions[index].action.value in primary_nodes%}primary-node{%endif%}">
+	{{ self::show_depth(depth=depth) }}
+	<span class="label">
+		{{instructions[index].action.value}}
+	</span>
+	{% for amino_acid_layer in amino_acid_layers %}
+	{% if amino_acid_layer == current_layer %}
+	{% if primary %}
+	{% set current_amino_acid = position_value_amino_acids_primary[loop.index0][index] %}
+	{% set parent_amino_acid = position_value_amino_acids_primary[loop.index0][parent_index] %}
+	{% else %}
+	{% set current_amino_acid = position_value_amino_acids[loop.index0][index] %}
+	{% set parent_amino_acid = position_value_amino_acids[loop.index0][parent_index] %}
+	{% endif %}
+	{% if current_amino_acid != parent_amino_acid %}
+	<span class="badge badge-primary">
+		{{parent_amino_acid}}{{loop.index}}{{current_amino_acid}}
+	</span>
+	{% endif %}
+	{% endif %}
+	{% endfor %}
+
+</div>
+{% for source in instructions[index].values %}
+{% if loop.last %}
+{{ self::layers(index=source, depth = depth_alt ~ "L", depth_alt=depth_alt ~ " ", parent = local_id,
+current_layer=current_layer,
+parent_index=index,primary=primary) }}
+
+{% else %}
+{{ self::layers(index=source, depth = depth_alt ~ "t", depth_alt=depth_alt ~ "i", parent = local_id,
+current_layer=current_layer,
+parent_index=index,primary=primary) }}
+
+{%endif %}
+{% endfor %}
+{% elif instructions[index].action.type == "Sequence" %}
+<div class="sequence">{{ self::show_depth(depth=depth) }}
+	<span class="label">
+		{{sequence_id_mapping[instructions[index].action.value]}}
+	</span>
+	{% for amino_acid_layer in amino_acid_layers %}
+	{% if amino_acid_layer == current_layer %}
+	{% if primary %}
+	{% set current_amino_acid = position_value_amino_acids_primary[loop.index0][index] %}
+	{% set parent_amino_acid = position_value_amino_acids_primary[loop.index0][parent_index] %}
+	{% else %}
+	{% set current_amino_acid = position_value_amino_acids[loop.index0][index] %}
+	{% set parent_amino_acid = position_value_amino_acids[loop.index0][parent_index] %}
+	{% endif %}
+	{% if current_amino_acid != parent_amino_acid %}
+	<span class="badge badge-primary">
+		{{parent_amino_acid}}{{loop.index}}{{current_amino_acid}}
+	</span>
+	{% endif %}
+	{% endif %}
+	{% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{% macro sequence(index, depth, parent, depth_alt="", current_layer=0, parent_index=0, position=0) %}
+{% set local_id = parent ~ "@" ~ index %}
+{% if instructions[index].action.type == "Combine" %}
+<div class="row">
+	{% for layer in position_layer_weights[position] %}
+	{% set source = instructions[index].values[layer.index] %}
+	<div class="col">
+		<div class="card box-shadow">
+			<div class="card-header">
+				Layer {{layer.index}} {{layer.proportion|percentage}}
+			</div>
+			<div class="card-body">
+
+				{{ self::sequence(index=source, depth = "", parent = local_id, current_layer =
+				loop.index0,parent_index=index,position=position) }}
+			</div>
+		</div>
+	</div>
+	{% endfor %}
+</div>
+{% elif instructions[index].action.type == "Node" %}
+<div class="node {%if instructions[index].action.value in primary_nodes%}primary-node{%endif%}">
+	{{ self::show_depth(depth=depth) }}
+	<span class="label">
+		{{instructions[index].action.value}}
+	</span>
+	{% set current_amino_acid = position_value_amino_acids[position][index] %}
+	{% set parent_amino_acid = position_value_amino_acids[position][parent_index] %}
+	<span class="amino amino-{{current_amino_acid}} {%if current_amino_acid != parent_amino_acid %}change{%endif%}">
+		{{current_amino_acid}}
+	</span>
+</div>
+{% for source in instructions[index].values %}
+{% if loop.last %}
+{{ self::sequence(index=source, depth = depth_alt ~ "L", depth_alt=depth_alt ~ " ", parent = local_id,
+current_layer=current_layer,
+parent_index=index,position=position) }}
+
+{% else %}
+{{ self::sequence(index=source, depth = depth_alt ~ "t", depth_alt=depth_alt ~ "i", parent = local_id,
+current_layer=current_layer,
+parent_index=index,position=position) }}
+
+{%endif %}
+{% endfor %}
+{% elif instructions[index].action.type == "Sequence" %}
+<div class="sequence">{{ self::show_depth(depth=depth) }}
+	<span class="label">
+		{{sequence_id_mapping[instructions[index].action.value]}}
+	</span>
+	{% set current_amino_acid = position_value_amino_acids[position][index] %}
+	{% set current_amino_acid = position_value_amino_acids[position][index] %}
+	{% set parent_amino_acid = position_value_amino_acids[position][parent_index] %}
+	<span class="amino amino-{{current_amino_acid}} {%if current_amino_acid != parent_amino_acid %}change{%endif%}">
+		{{current_amino_acid}}
+	</span>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro changes(index, parent_index, current_layer, node) %}
+{% if instructions[index].action.type == "Combine" %}
+<div class="row">
+	{% for source in instructions[index].values %}
+	{{ self::changes(index=source, current_layer=loop.index0, parent_index=index,node=node) }}
+	{% endfor %}
+</div>
+{% elif instructions[index].action.type == "Node" %}
+
+{% if instructions[index].action.value == node %}
+{% for layer in amino_acid_layers %}
+{% if layer == current_layer %}
+{% set current_amino_acid = position_value_amino_acids[loop.index0][index] %}
+{% set parent_amino_acid = position_value_amino_acids[loop.index0][parent_index] %}
+{% if current_amino_acid != parent_amino_acid %}
+<span class="badge badge-primary">
+	{{parent_amino_acid}}{{loop.index}}{{current_amino_acid}}
+</span>
+{% endif %}
+{%endif%}
+{% endfor %}
+{% endif %}
+{% for source in instructions[index].values %}
+{{ self::changes(index=source,
+current_layer=current_layer,
+parent_index=index,node=node) }}
+{% endfor %}
+{% elif instructions[index].action.type == "Sequence" %}
+
+{% endif %}
+{% endmacro %}

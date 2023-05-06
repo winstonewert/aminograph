@@ -1,0 +1,65 @@
+{% macro process(index, depth, parent) %}
+    {% set local_id = parent ~ "@" ~ index %}
+    {% if instructions[index].action.type == "Combine" %}
+        <tr class="combine {% if active[index] %}active{% endif %}" data-parent="{{ parent }}" data-index="{{ local_id }}" {% if depth != 0 %} style="display:none" {% endif %}>
+            <td>
+                <span style="margin-left: {{ depth }}rem">
+                    <i class="fas fa-plus"></i>
+                </span>
+            </td>
+            {% for value in values[index] %}
+                <td>
+                    {{ value|bits }}
+                </td>
+            {% endfor %}
+        </tr>
+        {% for source in instructions[index].values %}
+            {{ self::process(index=source, depth = depth + 1, parent = local_id) }}
+        {% endfor %}
+    {% elif instructions[index].action.type == "Node" %}
+        <tr class="node {% if active[index] %}active{% endif %}" data-index="{{ local_id }}" data-parent="{{ parent }}" {% if depth != 0 %} style="display:none" {% endif %}>
+            <td>
+                <span style="margin-left: {{ depth }}rem">
+                    <i class="fas fa-code-branch"></i>
+                    {{ instructions[index].action.value }}</span>
+            </td>
+            {% for value in values[index] %}
+                <td>
+                    {{ value|bits }}
+                </td>
+            {% endfor %}
+        </tr>
+        {% for source in instructions[index].values %}
+            {{ self::process(index=source, depth = depth + 1,parent = local_id) }}
+        {% endfor %}
+    {% elif instructions[index].action.type == "Module" %}
+        <tr class="node {% if active[index] %}active{% endif %}" data-index="{{ local_id }}" data-parent="{{ parent }}" {% if depth != 0 %} style="display:none" {% endif %}>
+            <td>
+                <span style="margin-left: {{ depth }}rem">
+                    <i class="fas fa-cogs"></i>
+                    {{ instructions[index].action.value }}</span>
+            </td>
+            {% for value in values[index] %}
+                <td>
+                    {{ value|bits }}
+                </td>
+            {% endfor %}
+        </tr>
+        {% for source in instructions[index].values %}
+            {{ self::process(index=source, depth = depth + 1,parent = local_id) }}
+        {% endfor %}
+    {% elif instructions[index].action.type == "Sequence" %}
+        <tr class="sequence {% if active[index] %}active{% endif %}" data-index="{{ local_id }}" data-parent="{{ parent }}" {% if depth != 0 %} style="display:none" {% endif %}>
+            <td>
+                <span style="margin-left: {{ depth }}rem">
+                    <i class="fas fa-dna"></i>
+                    {{ instructions[index].action.value }}</span>
+            </td>
+            {% for value in values[index] %}
+                <td>
+                    {{ value|bits }}
+                </td>
+            {% endfor %}
+        </tr>
+    {% endif %}
+{% endmacro %}
